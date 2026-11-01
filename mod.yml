@@ -1,0 +1,13 @@
+title: KH1 Modern Gummi Controls (1.1.0)
+originalAuthor: Mariano
+description: >-
+  Makes gummi ship flight control like a modern game: the aiming reticle stays
+  where you leave it instead of snapping back to the center, and up/down is
+  flipped from vanilla. Both are configurable. Steam version only.
+game: kh1
+assets:
+- name: scripts/KH1_Modern_Gummi_Controls.lua
+  platform: pc
+  method: copy
+  source:
+  - name: KH1_Modern_Gummi_Controls.lua
