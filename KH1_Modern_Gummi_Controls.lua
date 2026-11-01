@@ -2,7 +2,7 @@ LUAGUI_NAME = "KH1 Modern Gummi Controls"
 LUAGUI_AUTH = "Mariano"
 LUAGUI_DESC = "Gummi ship flight: inverted up/down and a reticle that stays where you leave it."
 
-local MOD_VERSION = "1.1.0"
+local MOD_VERSION = "1.1.1"
 
 -- ============================ SETTINGS ============================
 -- Players change these in KH1_Modern_Gummi_Controls_Config.lua in the game
@@ -74,6 +74,11 @@ local GAME_STATE_GUMMI = 7
 -- frame or the last". Found by a scan labeling level flight, braking, the
 -- world map and the pause menu; it has five copies 0x30 apart.
 local FLIGHT_FLAG = 0x23E7CC0
+-- The flag also alternates in the gummi garage. This one tells them apart:
+-- 2 while flying a route (pause menu included), 4 on the world map and in
+-- the garage, 79 on foot. Found by a second scan that labeled the garage.
+local GUMMI_MODE        = 0x2382B64
+local GUMMI_MODE_FLIGHT = 2
 local PAUSE_MENU       = 0x232DFA0   -- 1 in the gummi pause menu
 
 local LOG_FILE = "KH1_Modern_Gummi_Controls_log.txt"
@@ -306,12 +311,12 @@ end
 function _OnFrame()
     if not active then return end
 
-    local state, flag, pauseFlag =
-        ReadInt(GAME_STATE), ReadInt(FLIGHT_FLAG), ReadInt(PAUSE_MENU)
-    local inFlight = flag ~= 0 or lastFlag ~= 0
+    local state, flag, mode, pauseFlag = ReadInt(GAME_STATE), ReadInt(FLIGHT_FLAG),
+        ReadInt(GUMMI_MODE), ReadInt(PAUSE_MENU)
+    local inFlight = (flag ~= 0 or lastFlag ~= 0) and mode == GUMMI_MODE_FLIGHT
     lastFlag = flag
     if DebugLog then
-        local raw = string.format("state=%d flight=%s pause=%d", state,
+        local raw = string.format("state=%d mode=%d flight=%s pause=%d", state, mode,
             inFlight and "yes" or "no", pauseFlag)
         if raw ~= lastRaw then
             log(raw)
@@ -323,7 +328,11 @@ function _OnFrame()
     -- there and the stick drives the menu. The reticle resumes where it was
     -- after a pause; a new flight starts centered.
     local flying = state == GAME_STATE_GUMMI and inFlight and pauseFlag == 0
-    if not flying and pauseFlag ~= 0 then keepReticle = true end
+    if not flying then
+        -- Only a pause during flight keeps the reticle; leaving the pause
+        -- menu for anything but flight forgets it.
+        keepReticle = pauseFlag ~= 0 and (keepReticle or wasFlying)
+    end
     if flying ~= wasFlying then
         log(flying and "flight control on" or "flight control off")
         if flying then
